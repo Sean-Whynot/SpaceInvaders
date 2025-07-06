@@ -114,10 +114,11 @@ def show_score(x, y):
 
 # Lives
 lives = 3
+live_image = pygame.image.load('images/live.png')
 
 def show_lives(x, y):
-    lives_text = font.render("Lives : " + str(lives), True, (255, 255, 255))
-    screen.blit(lives_text, (x, y))
+    for i in range(lives):
+        screen.blit(live_image, (x + i * 30, y))
 
 # Game Over / Win flags
 game_over = False
@@ -164,7 +165,7 @@ while running:
         title_text = title_font.render("Space Invaders", True, (255, 255, 255))
         screen.blit(title_text, (width / 2 - title_text.get_width() / 2, height / 4))
 
-        highscore_text = font.render(f"High Score: {load_highscore()}", True, (255, 255, 255))
+        highscore_text = font.render("High Score: " + str(load_highscore()), True, (255, 255, 255))
         screen.blit(highscore_text, (width / 2 - highscore_text.get_width() / 2, height / 4 + 70))
 
         instructions_font = pygame.font.Font(None, 32)
@@ -305,10 +306,10 @@ while running:
         game_over_text = game_over_font.render(message, True, (255, 255, 255))
         screen.blit(game_over_text, (width / 2 - game_over_text.get_width() / 2, height / 2 - game_over_text.get_height() / 2 - 50))
 
-        final_score_text = font.render(f"Final Score: {score}", True, (255, 255, 255))
+        final_score_text = font.render("Final Score: " + str(score), True, (255, 255, 255))
         screen.blit(final_score_text, (width / 2 - final_score_text.get_width() / 2, height / 2 - game_over_text.get_height() / 2))
 
-        highscore_text = font.render(f"High Score: {load_highscore()}", True, (255, 255, 255))
+        highscore_text = font.render("High Score: " + str(load_highscore()), True, (255, 255, 255))
         screen.blit(highscore_text, (width / 2 - highscore_text.get_width() / 2, height / 2 - game_over_text.get_height() / 2 + 30))
 
         play_again_font = pygame.font.Font(None, 32)
