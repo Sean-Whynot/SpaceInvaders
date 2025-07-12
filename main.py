@@ -7,8 +7,8 @@ pygame.init()
 pygame.mixer.init()
 
 # Screen dimensions
-width = 800
-height = 600
+width = 1920
+height = 1080
 
 # Create the screen
 screen = pygame.display.set_mode((width, height))
@@ -22,7 +22,7 @@ background = pygame.image.load('images/background.png')
 # Player
 class Player:
     def __init__(self, x, y):
-        self.image = pygame.image.load('images/player.png')
+        self.image = pygame.transform.scale(pygame.image.load('images/player.png'), (128, 128))
         self.x = x
         self.y = y
         self.x_change = 0
@@ -30,57 +30,84 @@ class Player:
     def draw(self):
         screen.blit(self.image, (self.x, self.y))
 
-player = Player(370, 480)
+player = Player(900, 800)
 
 # Alien
 class Alien:
     def __init__(self, x, y):
-        self.image = pygame.image.load('images/alien.png')
+        self.image = pygame.transform.scale(pygame.image.load('images/alien.png'), (128, 128))
         self.x = x
         self.y = y
         self.x_change = 0.125
+        self.last_shot_time = 0
 
     def draw(self):
         screen.blit(self.image, (self.x, self.y))
 
 aliens = []
-for i in range(4):
-    for j in range(8):
-        aliens.append(Alien(j * 80 + 88, i * 50 + 50))
+level = 1
+# Alien
+# Alien Bullet
+class AlienBullet:
+    def __init__(self, x, y):
+        self.image = pygame.transform.scale(pygame.image.load('images/alien_bullet.png'), (64, 64))
+        self.x = x
+        self.y = y
+        self.y_change = 4
+
+    def draw(self):
+        screen.blit(self.image, (self.x + 32, self.y + 20))
+
+class Pinky(Alien):
+    def __init__(self, x, y):
+        super().__init__(x, y)
+        self.image = pygame.transform.scale(pygame.image.load('images/pinky.png'), (128, 128))
+        self.x_change = 0.25  # Faster than the original alien
+
+    def shoot_triple(self):
+        # Shoots three bullets in different directions
+        directions = [0, 45, -45]  # Straight, 45 degrees right, 45 degrees left
+        for angle in directions:
+            alien_bullets.append(RoundBullet(self.x, self.y, angle))
+
+class RoundBullet(AlienBullet):
+    def __init__(self, x, y, angle=0):
+        super().__init__(x, y)
+        self.image = pygame.transform.scale(pygame.image.load('images/round_bullet.png'), (64, 64))
+        self.angle = math.radians(angle)  # Convert angle to radians
+        self.speed = 4
+
+    def update(self):
+        # Move the bullet based on the angle
+        self.x += self.speed * math.sin(self.angle)
+        self.y += self.speed * math.cos(self.angle)
 
 # Bullet
 class Bullet:
     def __init__(self, x, y):
-        self.image = pygame.image.load('images/player_bullet.png')
+        self.image = pygame.transform.scale(pygame.image.load('images/player_bullet.png'), (64, 64))
         self.x = x
         self.y = y
         self.y_change = -10
-        self.state = "ready" # "ready" - you can't see the bullet, "fire" - the bullet is moving
 
     def draw(self):
-        if self.state == "fire":
-            screen.blit(self.image, (self.x + 16, self.y + 10))
+        screen.blit(self.image, (self.x + 32, self.y + 20))
 
-# Alien Bullet
-class AlienBullet:
-    def __init__(self, x, y):
-        self.image = pygame.image.load('images/alien_bullet.png')
-        self.x = x
-        self.y = y
-        self.y_change = 5
+    def update(self):
+        self.y += self.y_change
 
-    def draw(self):
-        screen.blit(self.image, (self.x + 16, self.y + 10))
 
 def isCollision(obj1X, obj1Y, obj2X, obj2Y):
     distance = math.sqrt(math.pow(obj1X - obj2X, 2) + (math.pow(obj1Y - obj2Y, 2)))
-    if distance < 27:
+    if distance < 64:
         return True
     else:
         return False
 
-bullet = Bullet(0, 480)
+bullets = []
 alien_bullets = []
+last_shot_time = 0
+shoot_delay = 100  # milliseconds
 
 # Sound effects
 laser_sound = pygame.mixer.Sound('sounds/laser.wav')
@@ -132,13 +159,10 @@ current_state = STATE_TITLE
 
 # Game Reset Function
 def reset_game():
-    global player, aliens, bullet, alien_bullets, score, lives, game_over, game_won, current_state, high_score, level
-    player = Player(370, 480)
+    global player, aliens, bullets, alien_bullets, score, lives, game_over, game_won, current_state, high_score, level, last_shot_time
+    player = Player(900, 800)
     aliens = []
-    for i in range(4):
-        for j in range(8):
-            aliens.append(Alien(j * 80 + 88, i * 50 + 50))
-    bullet = Bullet(0, 480)
+    bullets = []
     alien_bullets = []
     score = 0
     lives = 3
@@ -146,17 +170,28 @@ def reset_game():
     game_won = False
     high_score = load_highscore()
     level = 1
+    last_shot_time = 0
+    spawn_level_aliens()
     current_state = STATE_PLAYING
 
 def respawn_aliens():
     global aliens, level
-    aliens = []
-    for i in range(4):
-        for j in range(8):
-            aliens.append(Alien(j * 80 + 88, i * 50 + 50))
     level += 1
+    spawn_level_aliens()
 
-# Game loop
+def spawn_level_aliens():
+    global aliens
+    aliens = []
+    if level == 1:
+        for i in range(1):
+            for j in range(8):
+                aliens.append(Alien(j * 160 + 176, i * 100 + 100))
+    else:
+        for i in range(5):
+            aliens.append(Alien(i * 160 + 176, 100))
+        for i in range(5):
+            aliens.append(Pinky(i * 160 + 176, 300))
+
 running = True
 while running:
     if current_state == STATE_TITLE:
@@ -182,6 +217,7 @@ while running:
         pygame.display.update()
 
     elif current_state == STATE_PLAYING:
+        current_time = pygame.time.get_ticks()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -193,10 +229,10 @@ while running:
                 if event.key == pygame.K_RIGHT:
                     player.x_change = 5
                 if event.key == pygame.K_SPACE:
-                    if bullet.state == "ready":
+                    if current_time - last_shot_time > shoot_delay:
                         laser_sound.play()
-                        bullet.x = player.x
-                        bullet.state = "fire"
+                        bullets.append(Bullet(player.x, player.y))
+                        last_shot_time = current_time
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
                     player.x_change = 0
@@ -204,16 +240,16 @@ while running:
         player.x += player.x_change
         if player.x <= 0:
             player.x = 0
-        elif player.x >= 736:
-            player.x = 736
+        elif player.x >= 1792:
+            player.x = 1792
 
         # Alien Movement
         for alien in aliens:
-            alien.x += alien.x_change * (1 + (level - 1) * 0.5)
+            alien.x += alien.x_change
 
         move_down = False
         for alien in aliens:
-            if alien.x <= 0 or alien.x >= 736:
+            if alien.x <= 0 or alien.x >= 1792:
                 move_down = True
         
         if move_down:
@@ -225,34 +261,51 @@ while running:
         for alien in aliens:
             # Adjust shooting frequency based on remaining aliens
             # The fewer aliens, the higher the chance of shooting
-            shooting_chance_max = max(100, int(8000 * (len(aliens) / initial_alien_count) / (1 + (level - 1) * 0.5)))
-            if random.randint(0, shooting_chance_max) == 1:
-                laser_sound.play()
-                alien_bullets.append(AlienBullet(alien.x, alien.y))
+            # shooting_chance_max = max(100, int(8000 * (len(aliens) / initial_alien_count) / (1 + (level - 1) * 0.5)))
+            # if random.randint(0, shooting_chance_max) == 1:
+            if isinstance(alien, Pinky):
+                if current_time - alien.last_shot_time > 1000: # 1 second
+                    if random.random() < 0.1: # 10% chance
+                        laser_sound.play()
+                        alien.shoot_triple()
+                    alien.last_shot_time = current_time
+            else:
+                # Check if player is directly below the alien
+                if player.x < alien.x + alien.image.get_width() and player.x + player.image.get_width() > alien.x:
+                    if current_time - alien.last_shot_time > 1000: # 1 second
+                        if random.random() < 0.1: # 10% chance
+                            laser_sound.play()
+                            alien_bullets.append(AlienBullet(alien.x, alien.y))
+                        alien.last_shot_time = current_time
 
         # Bullet Movement
-        if bullet.y <= 0:
-            bullet.y = 480
-            bullet.state = "ready"
-
-        if bullet.state == "fire":
-            bullet.y += bullet.y_change
+        for bullet in bullets:
+            bullet.update()
+            if bullet.y < 0:
+                bullets.remove(bullet)
 
         # Alien Bullet Movement
         for alien_bullet in alien_bullets:
-            alien_bullet.y += alien_bullet.y_change
-            if alien_bullet.y > 600:
+            if isinstance(alien_bullet, RoundBullet):
+                alien_bullet.update()
+            else:
+                alien_bullet.y += alien_bullet.y_change
+            if alien_bullet.y > height:
                 alien_bullets.remove(alien_bullet)
 
         # Collision
-        for alien in aliens:
-            collision = isCollision(alien.x, alien.y, bullet.x, bullet.y)
-            if collision and bullet.state == "fire":
-                explosion_sound.play()
-                bullet.y = 480
-                bullet.state = "ready"
-                aliens.remove(alien)
-                score += 50
+        for bullet in bullets:
+            for alien in aliens:
+                collision = isCollision(alien.x, alien.y, bullet.x, bullet.y)
+                if collision:
+                    explosion_sound.play()
+                    bullets.remove(bullet)
+                    aliens.remove(alien)
+                    if isinstance(alien, Pinky):
+                        score += 100
+                    else:
+                        score += 50
+                    break
 
         # Player Collision
         for alien_bullet in alien_bullets:
@@ -285,7 +338,8 @@ while running:
         for alien in aliens:
             alien.draw()
         
-        bullet.draw()
+        for bullet in bullets:
+            bullet.draw()
 
         for alien_bullet in alien_bullets:
             alien_bullet.draw()
